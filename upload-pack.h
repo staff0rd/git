@@ -14,5 +14,8 @@ struct repository;
 struct argv_array;
 extern int upload_pack_v2(struct repository *r, struct argv_array *keys,
 			  struct argv_array *args);
+struct strbuf;
+extern int upload_pack_advertise(struct repository *r,
+				 struct strbuf *value);
 
 #endif /* UPLOAD_PACK_H */

@@ -10,4 +10,9 @@ struct upload_pack_options {
 
 void upload_pack(struct upload_pack_options *options);
 
+struct repository;
+struct argv_array;
+extern int upload_pack_v2(struct repository *r, struct argv_array *keys,
+			  struct argv_array *args);
+
 #endif /* UPLOAD_PACK_H */

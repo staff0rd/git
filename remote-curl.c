@@ -1174,7 +1174,8 @@ static size_t proxy_in(char *buffer, size_t eltsize,
 
 
 	if (eltsize != 1)
-		BUG("curl read callback called with size = %zu != 1", eltsize);
+		BUG("curl read callback called with size = %"PRIuMAX" != 1",
+		    (uintmax_t)eltsize);
 	max = nmemb;
 
 	if (!avail) {
@@ -1217,7 +1218,8 @@ static size_t proxy_out(char *buffer, size_t eltsize,
 	struct proxy_state *p = userdata;
 
 	if (eltsize != 1)
-		BUG("curl read callback called with size = %zu != 1", eltsize);
+		BUG("curl read callback called with size = %"PRIuMAX" != 1",
+		    (uintmax_t)eltsize);
 	size = nmemb;
 
 	write_or_die(p->out, buffer, size);

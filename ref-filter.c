@@ -2000,7 +2000,7 @@ static void do_merge_filter(struct ref_filter_cbdata *ref_cbdata)
 	free(to_clear);
 }
 
-int add_str_to_commit_list(struct string_list_item *item, void *commit_list)
+static int add_str_to_commit_list(struct string_list_item *item, void *commit_list)
 {
 	struct object_id oid;
 	struct commit *commit;

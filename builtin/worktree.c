@@ -101,6 +101,9 @@ static int prune_worktree(const char *id, struct strbuf *reason)
 	if (!file_exists(path)) {
 		free(path);
 		if (st.st_mtime <= expire) {
+			if (!stat(git_path("worktrees/%s/index", id), &st) &&
+			    st.st_mtime > expire)
+				return 0;
 			strbuf_addf(reason, _("Removing worktrees/%s: gitdir file points to non-existent location"), id);
 			return 1;
 		} else {

@@ -2,6 +2,7 @@
 #define PACK_OBJECTS_H
 
 #define OE_DFS_STATE_BITS 2
+#define OE_DEPTH_BITS 12
 
 /*
  * State flags for depth-first search used for analyzing delta cycles.
@@ -43,12 +44,9 @@ struct object_entry {
 	unsigned tagged:1; /* near the very tip of refs */
 	unsigned filled:1; /* assigned write-order */
 	unsigned dfs_state:OE_DFS_STATE_BITS;
+	unsigned depth:OE_DEPTH_BITS;
 
-	/* XXX 20 bits hole, try to pack */
-
-	int depth;
-
-	/* size: 120 */
+	/* size: 120, bit_padding: 8 bits */
 };
 
 struct packing_data {

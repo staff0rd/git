@@ -38,12 +38,10 @@ struct object_entry {
 	uint32_t delta_sibling_idx; /* other deltified objects who
 				     * uses the same base as me
 				     */
-	/* XXX 4 bytes hole, try to pack */
-
+	uint32_t hash;			/* name hint hash */
 	void *delta_data;	/* cached delta (uncompressed) */
 	unsigned long delta_size;	/* delta data size (uncompressed) */
 	unsigned long z_delta_size;	/* delta data size (compressed) */
-	uint32_t hash;			/* name hint hash */
 	unsigned char in_pack_header_size; /* note: spare bits available! */
 	unsigned in_pack_idx:OE_IN_PACK_BITS;	/* already in pack */
 	unsigned type:TYPE_BITS;
@@ -62,7 +60,7 @@ struct object_entry {
 
 	unsigned depth:OE_DEPTH_BITS;
 
-	/* size: 104, padding: 4, bit_padding: 18 bits */
+	/* size: 96, bit_padding: 18 bits */
 };
 
 struct packing_data {

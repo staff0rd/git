@@ -33,11 +33,13 @@ struct object_entry {
 	struct pack_idx_entry idx;
 	unsigned long size;	/* uncompressed size */
 	off_t in_pack_offset;
-	struct object_entry *delta;	/* delta base object */
-	struct object_entry *delta_child; /* deltified objects who bases me */
-	struct object_entry *delta_sibling; /* other deltified objects who
-					     * uses the same base as me
-					     */
+	uint32_t delta_idx;	/* delta base object */
+	uint32_t delta_child_idx; /* deltified objects who bases me */
+	uint32_t delta_sibling_idx; /* other deltified objects who
+				     * uses the same base as me
+				     */
+	/* XXX 4 bytes hole, try to pack */
+
 	void *delta_data;	/* cached delta (uncompressed) */
 	unsigned long delta_size;	/* delta data size (uncompressed) */
 	unsigned long z_delta_size;	/* delta data size (compressed) */
@@ -60,7 +62,7 @@ struct object_entry {
 
 	unsigned depth:OE_DEPTH_BITS;
 
-	/* size: 112, padding: 4, bit_padding: 18 bits */
+	/* size: 104, padding: 4, bit_padding: 18 bits */
 };
 
 struct packing_data {

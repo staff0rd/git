@@ -28,6 +28,7 @@ struct object_entry {
 	unsigned tagged:1; /* near the very tip of refs */
 	unsigned filled:1; /* assigned write-order */
 
+	/* XXX 28 bits hole, try to pack */
 	/*
 	 * State flags for depth-first search used for analyzing delta cycles.
 	 *
@@ -40,6 +41,7 @@ struct object_entry {
 		DFS_DONE
 	} dfs_state;
 	int depth;
+	/* size: 136, padding: 4 */
 };
 
 struct packing_data {

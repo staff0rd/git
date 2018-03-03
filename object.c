@@ -449,6 +449,7 @@ void clear_commit_marks_all(unsigned int flags)
 void raw_object_store_init(struct raw_object_store *o)
 {
 	memset(o, 0, sizeof(*o));
+	INIT_LIST_HEAD(&o->packed_git_mru);
 }
 
 static void free_alt_odb(struct alternate_object_database *alt)
@@ -472,4 +473,10 @@ void raw_object_store_clear(struct raw_object_store *o)
 
 	free_alt_odbs(o);
 	o->alt_odb_tail = NULL;
+
+	INIT_LIST_HEAD(&o->packed_git_mru);
+	/*
+	 * TODO: call close_all_packs once migrated to
+	 * take an object store argument
+	 */
 }

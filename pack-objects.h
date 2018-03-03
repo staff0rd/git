@@ -4,6 +4,9 @@
 #define OE_DFS_STATE_BITS 2
 #define OE_DEPTH_BITS 12
 
+#define IN_PACK_POS(to_pack, obj) \
+	(to_pack)->in_pack_pos[(struct object_entry *)(obj) - (to_pack)->objects]
+
 /*
  * State flags for depth-first search used for analyzing delta cycles.
  *
@@ -31,7 +34,6 @@ struct object_entry {
 	unsigned long delta_size;	/* delta data size (uncompressed) */
 	unsigned long z_delta_size;	/* delta data size (compressed) */
 	uint32_t hash;			/* name hint hash */
-	unsigned int in_pack_pos;
 	unsigned char in_pack_header_size; /* note: spare bits available! */
 	unsigned type:TYPE_BITS;
 	unsigned in_pack_type:TYPE_BITS; /* could be delta */
@@ -46,7 +48,7 @@ struct object_entry {
 	unsigned dfs_state:OE_DFS_STATE_BITS;
 	unsigned depth:OE_DEPTH_BITS;
 
-	/* size: 120, bit_padding: 8 bits */
+	/* size: 112, bit_padding: 8 bits */
 };
 
 struct packing_data {
@@ -55,6 +57,8 @@ struct packing_data {
 
 	int32_t *index;
 	uint32_t index_size;
+
+	unsigned int *in_pack_pos;
 };
 
 struct object_entry *packlist_alloc(struct packing_data *pdata,

@@ -3,9 +3,13 @@
 
 #define OE_DFS_STATE_BITS 2
 #define OE_DEPTH_BITS 12
+#define OE_IN_PACK_BITS 14
 
 #define IN_PACK_POS(to_pack, obj) \
 	(to_pack)->in_pack_pos[(struct object_entry *)(obj) - (to_pack)->objects]
+
+#define IN_PACK(to_pack, obj) \
+	(to_pack)->in_pack[(obj)->in_pack_idx]
 
 /*
  * State flags for depth-first search used for analyzing delta cycles.
@@ -20,10 +24,14 @@ enum dfs_state {
 	DFS_NUM_STATES
 };
 
+/*
+ * The size of struct nearly determines pack-objects's memory
+ * consumption. This struct is packed tight for that reason. When you
+ * add or reorder something in this struct, think a bit about this.
+ */
 struct object_entry {
 	struct pack_idx_entry idx;
 	unsigned long size;	/* uncompressed size */
-	struct packed_git *in_pack;	/* already in pack */
 	off_t in_pack_offset;
 	struct object_entry *delta;	/* delta base object */
 	struct object_entry *delta_child; /* deltified objects who bases me */
@@ -35,6 +43,7 @@ struct object_entry {
 	unsigned long z_delta_size;	/* delta data size (compressed) */
 	uint32_t hash;			/* name hint hash */
 	unsigned char in_pack_header_size; /* note: spare bits available! */
+	unsigned in_pack_idx:OE_IN_PACK_BITS;	/* already in pack */
 	unsigned type:TYPE_BITS;
 	unsigned in_pack_type:TYPE_BITS; /* could be delta */
 	unsigned preferred_base:1; /*
@@ -46,9 +55,12 @@ struct object_entry {
 	unsigned tagged:1; /* near the very tip of refs */
 	unsigned filled:1; /* assigned write-order */
 	unsigned dfs_state:OE_DFS_STATE_BITS;
+
+	/* XXX 8 bits hole, try to pack */
+
 	unsigned depth:OE_DEPTH_BITS;
 
-	/* size: 112, bit_padding: 8 bits */
+	/* size: 112, padding: 4, bit_padding: 18 bits */
 };
 
 struct packing_data {
@@ -59,6 +71,8 @@ struct packing_data {
 	uint32_t index_size;
 
 	unsigned int *in_pack_pos;
+	int in_pack_count;
+	struct packed_git *in_pack[1 << OE_IN_PACK_BITS];
 };
 
 struct object_entry *packlist_alloc(struct packing_data *pdata,

@@ -1082,6 +1082,33 @@ sub check_hunk_label {
 	return 1;
 }
 
+sub split_hunk_selection {
+	local $_;
+	my @fields = @_;
+	my @ret;
+	for (@fields) {
+		if (/^(-[0-9])(.*)/) {
+			push @ret, $1;
+			$_ = $2;
+		}
+		while ($_ ne '') {
+			if (/^[0-9]-$/) {
+				push @ret, $_;
+				last;
+			} elsif (/^([0-9](?:-[0-9])?)(.*)/) {
+				push @ret, $1;
+				$_ = $2;
+			} else {
+				error_msg sprintf
+				    __("invalid hunk line '%s'\n"),
+				    substr($_, 0, 1);
+				return ();
+			}
+		}
+	}
+	return @ret;
+}
+
 sub parse_hunk_selection {
 	local $_;
 	my ($hunk, $line) = @_;
@@ -1099,6 +1126,9 @@ sub parse_hunk_selection {
 				return undef;
 			}
 		}
+	}
+	if ($max_label < 10) {
+		@fields = split_hunk_selection(@fields) or return undef;
 	}
 	for (@fields) {
 		if (/^([0-9]*)-([0-9]*)$/) {

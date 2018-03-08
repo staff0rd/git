@@ -1754,8 +1754,7 @@ _git_merge ()
 
 	case "$cur" in
 	--*)
-		__gitcomp_builtin merge "--rerere-autoupdate
-				--no-rerere-autoupdate
+		__gitcomp_builtin merge "--no-rerere-autoupdate
 				--no-commit --no-edit --no-ff
 				--no-log --no-progress
 				--no-squash --no-stat
@@ -1816,7 +1815,7 @@ _git_name_rev ()
 
 _git_notes ()
 {
-	local subcommands='add append copy edit list prune remove show'
+	local subcommands='add append copy edit get-ref list merge prune remove show'
 	local subcommand="$(__git_find_on_cmdline "$subcommands")"
 
 	case "$subcommand,$cur" in
@@ -1833,23 +1832,14 @@ _git_notes ()
 			;;
 		esac
 		;;
-	add,--reuse-message=*|append,--reuse-message=*|\
-	add,--reedit-message=*|append,--reedit-message=*)
+	*,--reuse-message=*|*,--reedit-message=*)
 		__git_complete_refs --cur="${cur#*=}"
 		;;
-	add,--*)
-		__gitcomp_builtin notes_add
+	*,--*)
+		__gitcomp_builtin notes_$subcommand
 		;;
-	append,--*)
-		__gitcomp_builtin notes_append
-		;;
-	copy,--*)
-		__gitcomp_builtin notes_copy
-		;;
-	prune,--*)
-		__gitcomp_builtin notes_prune
-		;;
-	prune,*)
+	prune,*|get-ref,*)
+		# this command does not take a ref, do not complete it
 		;;
 	*)
 		case "$prev" in
@@ -1963,6 +1953,7 @@ _git_rebase ()
 			--autostash --no-autostash
 			--verify --no-verify
 			--keep-empty --root --force-rebase --no-ff
+			--rerere-autoupdate
 			--exec
 			"
 

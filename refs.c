@@ -13,6 +13,7 @@
 #include "tag.h"
 #include "submodule.h"
 #include "worktree.h"
+#include "argv-array.h"
 
 /*
  * List of all available backends
@@ -499,6 +500,19 @@ int refname_match(const char *abbrev_name, const char *full_name)
 	}
 
 	return 0;
+}
+
+/*
+ * Given a 'pattern' expand it by the rules in 'ref_rev_parse_rules' and add
+ * the results to 'patterns'
+ */
+void expand_ref_pattern(struct argv_array *patterns, const char *pattern)
+{
+	const char **p;
+	for (p = ref_rev_parse_rules; *p; p++) {
+		int len = strlen(pattern);
+		argv_array_pushf(patterns, *p, len, pattern);
+	}
 }
 
 /*

@@ -21,6 +21,10 @@
 #include "argv-array.h"
 #include "commit.h"
 #include "packfile.h"
+#include "pack.h"
+#include "pack-objects.h"
+#include "blob.h"
+#include "tree.h"
 
 #define FAILED_RUN "failed to run %s"
 
@@ -40,6 +44,8 @@ static timestamp_t gc_log_expire_time;
 static const char *gc_log_expire = "1.day.ago";
 static const char *prune_expire = "2.weeks.ago";
 static const char *prune_worktrees_expire = "3.months.ago";
+static unsigned long big_base_pack_threshold;
+static unsigned long max_delta_cache_size = DEFAULT_DELTA_CACHE_SIZE;
 
 static struct argv_array pack_refs_cmd = ARGV_ARRAY_INIT;
 static struct argv_array reflog = ARGV_ARRAY_INIT;
@@ -127,6 +133,9 @@ static void gc_config(void)
 	git_config_get_expiry("gc.worktreepruneexpire", &prune_worktrees_expire);
 	git_config_get_expiry("gc.logexpiry", &gc_log_expire);
 
+	git_config_get_ulong("gc.bigbasepackthreshold", &big_base_pack_threshold);
+	git_config_get_ulong("pack.deltacachesize", &max_delta_cache_size);
+
 	git_config(git_default_config, NULL);
 }
 
@@ -165,6 +174,19 @@ static int too_many_loose_objects(void)
 	return needed;
 }
 
+static struct packed_git *find_the_base_pack(void)
+{
+	struct packed_git *p, *base = NULL;
+
+	for (p = get_packed_git(the_repository); p; p = p->next) {
+		if (p->pack_local &&
+		    (!base || base->pack_size < p->pack_size))
+			base = p;
+	}
+
+	return base;
+}
+
 static int too_many_packs(void)
 {
 	struct packed_git *p;
@@ -187,7 +209,101 @@ static int too_many_packs(void)
 	return gc_auto_pack_limit < cnt;
 }
 
-static void add_repack_all_option(void)
+static inline unsigned long total_ram(void)
+{
+	unsigned long default_ram = 4;
+#ifdef HAVE_SYSINFO
+	struct sysinfo si;
+
+	if (!sysinfo(&si))
+		return si.totalram;
+#elif defined(HAVE_BSD_SYSCTL) && defined(HW_MEMSIZE)
+	int64_t physical_memory;
+	int mib[2];
+	size_t length;
+
+	mib[0] = CTL_HW;
+	mib[1] = HW_MEMSIZE;
+	length = sizeof(int64_t);
+	if (!sysctl(mib, 2, &physical_memory, &length, NULL, 0))
+		return physical_memory;
+#elif defined(GIT_WINDOWS_NATIVE)
+	MEMORYSTATUSEX memInfo;
+
+	memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+	if (GlobalMemoryStatusEx(&memInfo))
+		return memInfo.ullTotalPhys;
+#else
+	fprintf(stderr, _("unrecognized platform, assuming %lu GB RAM\n"),
+		default_ram);
+#endif
+	return default_ram * 1024 * 1024 * 1024;
+}
+
+static int pack_objects_uses_too_much_memory(struct packed_git *pack)
+{
+	unsigned long nr_objects = approximate_object_count();
+	size_t mem_want, mem_have, os_cache, heap;
+
+	if (!pack || !nr_objects)
+		return 0;
+
+	if (big_base_pack_threshold)
+		return pack->pack_size >= big_base_pack_threshold;
+
+	/*
+	 * First we have to scan through at least one pack.
+	 * Assume enough room in OS file cache to keep the entire pack
+	 * or we may accidentally evict data of other processes from
+	 * the cache.
+	 */
+	os_cache = pack->pack_size + pack->index_size;
+	/* then pack-objects needs lots more for book keeping */
+	heap = sizeof(struct object_entry) * nr_objects;
+	/*
+	 * internal rev-list --all --objects takes up some memory too,
+	 * let's say half of it is for blobs
+	 */
+	heap += sizeof(struct blob) * nr_objects / 2;
+	/*
+	 * and the other half is for trees (commits and tags are
+	 * usually insignificant)
+	 */
+	heap += sizeof(struct tree) * nr_objects / 2;
+	/* and then obj_hash[], underestimated in fact */
+	heap += sizeof(struct object *) * nr_objects;
+	/* revindex is used also */
+	heap += sizeof(struct revindex_entry) * nr_objects;
+	/*
+	 * read_sha1_file() (either at delta calculation phase, or
+	 * writing phase) also fills up the delta base cache
+	 */
+	heap += delta_base_cache_limit;
+	/* and of course pack-objects has its own delta cache */
+	heap += max_delta_cache_size;
+
+	/*
+	 * Only allow 1/2 of memory for pack-objects, leave the rest
+	 * for the OS and other processes in the system.
+	 */
+	mem_have = total_ram() / 2;
+	mem_want = os_cache + heap;
+
+	trace_printf("gc mem estimation\n"
+		     "mem_have: %" PRIuMAX ", mem_want: %" PRIuMAX ", "
+		     "heap: %" PRIuMAX "\n"
+		     "pack_size: %" PRIuMAX ", index_size: %" PRIuMAX ", "
+		     "nr_objects: %" PRIuMAX "\n"
+		     "base_cache: %" PRIuMAX ", delta_cache: %" PRIuMAX "\n",
+		     (uintmax_t)mem_have, (uintmax_t)mem_want, (uintmax_t)heap,
+		     (uintmax_t)pack->pack_size, (uintmax_t)pack->index_size,
+		     (uintmax_t)nr_objects,
+		     (uintmax_t)delta_base_cache_limit, (uintmax_t)max_delta_cache_size);
+
+	return mem_want >= mem_have;
+}
+
+static void add_repack_all_option(struct packed_git *keep_pack)
 {
 	if (prune_expire && !strcmp(prune_expire, "now"))
 		argv_array_push(&repack, "-a");
@@ -196,6 +312,10 @@ static void add_repack_all_option(void)
 		if (prune_expire)
 			argv_array_pushf(&repack, "--unpack-unreachable=%s", prune_expire);
 	}
+
+	if (keep_pack)
+		argv_array_pushf(&repack, "--keep-pack=%s",
+				 basename(keep_pack->pack_name));
 }
 
 static void add_repack_incremental_option(void)
@@ -218,9 +338,14 @@ static int need_to_gc(void)
 	 * we run "repack -A -d -l".  Otherwise we tell the caller
 	 * there is no need.
 	 */
-	if (too_many_packs())
-		add_repack_all_option();
-	else if (too_many_loose_objects())
+	if (too_many_packs()) {
+		struct packed_git *exclude = find_the_base_pack();
+
+		if (!pack_objects_uses_too_much_memory(exclude))
+			exclude = NULL;
+
+		add_repack_all_option(exclude);
+	} else if (too_many_loose_objects())
 		add_repack_incremental_option();
 	else
 		return 0;
@@ -353,6 +478,7 @@ int cmd_gc(int argc, const char **argv, const char *prefix)
 	const char *name;
 	pid_t pid;
 	int daemonized = 0;
+	int keep_base_pack = -1;
 
 	struct option builtin_gc_options[] = {
 		OPT__QUIET(&quiet, N_("suppress progress reporting")),
@@ -365,6 +491,8 @@ int cmd_gc(int argc, const char **argv, const char *prefix)
 		OPT_BOOL_F(0, "force", &force,
 			   N_("force running gc even if there may be another gc running"),
 			   PARSE_OPT_NOCOMPLETE),
+		OPT_BOOL(0, "keep-base-pack", &keep_base_pack,
+			 N_("repack all other packs except the base pack")),
 		OPT_END()
 	};
 
@@ -430,8 +558,19 @@ int cmd_gc(int argc, const char **argv, const char *prefix)
 			 */
 			daemonized = !daemonize();
 		}
-	} else
-		add_repack_all_option();
+	} else {
+		struct packed_git *base_pack = find_the_base_pack();
+		struct packed_git *exclude = NULL;
+
+		if (keep_base_pack != -1) {
+			if (keep_base_pack)
+				exclude = base_pack;
+		} else if (base_pack && big_base_pack_threshold &&
+			   base_pack->pack_size >= big_base_pack_threshold)
+			exclude = base_pack;
+
+		add_repack_all_option(exclude);
+	}
 
 	name = lock_repo_for_gc(force, &pid);
 	if (name) {

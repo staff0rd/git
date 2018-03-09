@@ -1562,6 +1562,13 @@ gc.autoDetach::
 	Make `git gc --auto` return immediately and run in background
 	if the system supports it. Default is true.
 
+gc.bigBasePackThreshold::
+	Make `git gc --auto` only enable `--keep-base-pack` when the
+	base pack's size is larger than this limit (in bytes).
+	Defaults to zero, which disables this check and lets
+	`git gc --auto` determine when to enable `--keep-base-pack`
+	based on memory usage.
+
 gc.logExpiry::
 	If the file gc.log exists, then `git gc --auto` won't run
 	unless that file is more than 'gc.logExpiry' old.  Default is

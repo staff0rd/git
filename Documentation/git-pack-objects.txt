@@ -126,6 +126,10 @@ base-name::
 	has a .keep file to be ignored, even if it would have
 	otherwise been packed.
 
+--keep-pack=<pack name>::
+	Ignore the given pack. This is the equivalent of having
+	`.keep` file on the pack. Implies `--honor-pack-keep`.
+
 --incremental::
 	This flag causes an object already in a pack to be ignored
 	even if it would have otherwise been packed.

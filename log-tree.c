@@ -659,6 +659,8 @@ void show_log(struct rev_info *opt)
 		show_mergetag(opt, commit);
 	}
 
+	get_commit_buffer(commit, NULL);
+
 	if (opt->show_notes) {
 		int raw;
 		struct strbuf notebuf = STRBUF_INIT;

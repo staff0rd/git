@@ -11,6 +11,7 @@
  */
 
 #include "builtin.h"
+#include "repository.h"
 #include "config.h"
 #include "tempfile.h"
 #include "lockfile.h"
@@ -173,7 +174,7 @@ static int too_many_packs(void)
 		return 0;
 
 	prepare_packed_git();
-	for (cnt = 0, p = packed_git; p; p = p->next) {
+	for (cnt = 0, p = get_packed_git(the_repository); p; p = p->next) {
 		if (!p->pack_local)
 			continue;
 		if (p->pack_keep)

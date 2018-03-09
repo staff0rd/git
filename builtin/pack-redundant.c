@@ -7,6 +7,7 @@
 */
 
 #include "builtin.h"
+#include "repository.h"
 #include "packfile.h"
 
 #define BLKSIZE 512
@@ -571,7 +572,7 @@ static struct pack_list * add_pack(struct packed_git *p)
 
 static struct pack_list * add_pack_file(const char *filename)
 {
-	struct packed_git *p = packed_git;
+	struct packed_git *p = get_packed_git(the_repository);
 
 	if (strlen(filename) < 40)
 		die("Bad pack filename: %s", filename);
@@ -586,7 +587,7 @@ static struct pack_list * add_pack_file(const char *filename)
 
 static void load_all(void)
 {
-	struct packed_git *p = packed_git;
+	struct packed_git *p = get_packed_git(the_repository);
 
 	while (p) {
 		add_pack(p);

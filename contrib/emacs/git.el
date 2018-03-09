@@ -755,22 +755,13 @@ Return the list of files that haven't been handled."
       (setq unmerged-files (nreverse unmerged-files))  ;; assume it is sorted already
       (git-set-filenames-state status unmerged-files 'unmerged))))
 
-(defun git-get-exclude-files ()
-  "Get the list of exclude files to pass to git-ls-files."
-  (let (files
-        (config (git-config "core.excludesfile")))
-    (when (file-readable-p ".git/info/exclude")
-      (push ".git/info/exclude" files))
-    (when (and config (file-readable-p config))
-      (push config files))
-    files))
-
 (defun git-run-ls-files-with-excludes (status files default-state &rest options)
-  "Run git-ls-files on FILES with appropriate --exclude-from options."
-  (let ((exclude-files (git-get-exclude-files)))
-    (apply #'git-run-ls-files status files default-state "--directory" "--no-empty-directory"
-           (concat "--exclude-per-directory=" git-per-dir-ignore-file)
-           (append options (mapcar (lambda (f) (concat "--exclude-from=" f)) exclude-files)))))
+  "Run git-ls-files on FILES with appropriate exclude options."
+  (apply #'git-run-ls-files status files default-state
+	 "--directory" "--no-empty-directory" "--exclude-standard"
+	 (append (unless (string-equal git-per-dir-ignore-file ".gitignore") ; handled by --exclude-standard
+		   (list (concat "--exclude-per-directory=" git-per-dir-ignore-file)))
+		 options)))
 
 (defun git-update-status-files (&optional files mark-files)
   "Update the status of FILES from the index.

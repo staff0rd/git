@@ -536,7 +536,7 @@ proc git {args} {
 	set fd [eval [list git_read] $args]
 	fconfigure $fd -translation binary -encoding utf-8
 	set result [string trimright [read $fd] "\n"]
-	close $fd
+	catch {close $fd}
 	if {$::_trace} {
 		puts stderr "< $result"
 	}
@@ -766,11 +766,29 @@ if {[is_Windows]} {
 		wm iconphoto . -default gitlogo gitlogo32
 	}
 }
+######################################################################
+##
+## find git
+
+set _git  [_which git]
+if {$_git eq {}} {
+	catch {wm withdraw .}
+	tk_messageBox \
+		-icon error \
+		-type ok \
+		-title [mc "git-gui: fatal error"] \
+		-message [mc "Cannot find git in PATH."]
+	exit 1
+}
+
+set scale [git config --global gui.scale]
+if {$scale ne {}} {
+	 tk scaling $scale
+}
 
 ######################################################################
 ##
 ## config defaults
-
 set cursor_ptr arrow
 font create font_ui
 if {[lsearch -exact [font names] TkDefaultFont] != -1} {
@@ -906,20 +924,6 @@ set font_descs {
 set default_config(gui.stageuntracked) ask
 set default_config(gui.displayuntracked) true
 
-######################################################################
-##
-## find git
-
-set _git  [_which git]
-if {$_git eq {}} {
-	catch {wm withdraw .}
-	tk_messageBox \
-		-icon error \
-		-type ok \
-		-title [mc "git-gui: fatal error"] \
-		-message [mc "Cannot find git in PATH."]
-	exit 1
-}
 
 ######################################################################
 ##

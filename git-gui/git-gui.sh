@@ -791,10 +791,13 @@ font create font_diffbold
 font create font_diffitalic
 
 foreach class {Button Checkbutton Entry Label
-		Labelframe Listbox Message
+		Labelframe Listbox Message Dialog.msg
 		Radiobutton Spinbox Text} {
 	option add *$class.font font_ui
 }
+
+option add *Dialog.msg.wrapLength 6i
+
 if {![is_MacOSX]} {
 	option add *Menu.font font_ui
 	option add *Entry.borderWidth 1 startupFile

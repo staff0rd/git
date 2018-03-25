@@ -923,6 +923,7 @@ set font_descs {
 }
 set default_config(gui.stageuntracked) ask
 set default_config(gui.displayuntracked) true
+set default_config(gui.scale) [format "%.2f" [tk scaling]]
 
 
 ######################################################################

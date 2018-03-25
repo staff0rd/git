@@ -267,6 +267,32 @@ proc do_options {} {
 	}
 	unset all_dicts
 
+	#########
+	# Scaling
+
+	incr optid
+	${NS}::frame $w.global.$optid
+	${NS}::label $w.global.$optid.l -text [mc "Scaling (requires restart): "]
+
+	puts [format "%.2f" $global_config_new(gui.scale)]
+	#[format "%.2f"  ]
+
+	tspinbox $w.global.$optid.v \
+					-textvariable global_config_new(gui.scale) \
+					-format "%.2f" \
+					-from 0.1 \
+					-to 5 \
+					-increment 0.1 \
+					-width 5
+
+	pack $w.global.$optid.l -side left -anchor w -fill x
+	pack $w.global.$optid -side top -anchor w -fill x
+	bind $w.global.$optid.v <FocusIn> {%W selection range 0 end}
+	pack $w.global.$optid.v -side right -anchor e -padx 5
+
+	########
+	# Fonts
+
 	set all_fonts [lsort [font families]]
 	foreach option $font_descs {
 		set name [lindex $option 0]

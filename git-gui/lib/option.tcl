@@ -274,9 +274,6 @@ proc do_options {} {
 	${NS}::frame $w.global.$optid
 	${NS}::label $w.global.$optid.l -text [mc "Scaling (requires restart): "]
 
-	puts [format "%.2f" $global_config_new(gui.scale)]
-	#[format "%.2f"  ]
-
 	tspinbox $w.global.$optid.v \
 					-textvariable global_config_new(gui.scale) \
 					-format "%.2f" \
